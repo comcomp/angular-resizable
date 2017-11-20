@@ -139,6 +139,14 @@ angular.module('angularResizable', [])
                     scope.$apply();
                 };
 
+                var mouseDownHandler = function (direction, e) {
+                    var disabled = (scope.rDisabled === 'true');
+                    if (!disabled && e.which === 1) {
+                        // left mouse click
+                        dragStart(e, direction);
+                    }
+                };
+                var listenersToRemove = [];
                 dir.forEach(function (direction) {
                     var grabber = document.createElement('div');
 
@@ -146,17 +154,23 @@ angular.module('angularResizable', [])
                     grabber.setAttribute('class', 'rg-' + direction);
                     grabber.innerHTML = inner;
                     element[0].appendChild(grabber);
-                    grabber.ondragstart = function() { return false; };
-
-                    var down = function(e) {
-                        var disabled = (scope.rDisabled === 'true');
-                        if (!disabled && (e.which === 1 || e.touches)) {
-                            // left mouse click or touch screen
-                            dragStart(e, direction);
-                        }
+                    grabber.ondragstart = function () {
+                        return false;
                     };
-                    grabber.addEventListener('mousedown', down, false);
-                    grabber.addEventListener('touchstart', down, false);
+
+                    var handler = mouseDownHandler.bind(null, direction);
+                    listenersToRemove.push({element: grabber, event: 'mousedown', handler: handler});
+                    grabber.addEventListener('mousedown', handler, false);
+                });
+
+                var unregister = scope.$on("$destroy", function (e, i) {
+                    listenersToRemove.forEach(function (listener) {
+                        listener.element.removeEventListener(listener.event, listener.handler);
+                    });
+
+                    if (unregister) {
+                        unregister();
+                    }
                 });
             }
         };
